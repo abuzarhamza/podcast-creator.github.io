@@ -1,0 +1,22 @@
+{
+  "name": "podcast-creator.github.io",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abuzarhamza/podcast-creator.github.io.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/abuzarhamza/podcast-creator.github.io/issues"
+  },
+  "homepage": "https://github.com/abuzarhamza/podcast-creator.github.io#readme",
+  "dependencies": {
+    "simple-git": "^3.22.0"
+  }
+}
