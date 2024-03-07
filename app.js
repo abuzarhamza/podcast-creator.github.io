@@ -60,7 +60,7 @@ const initGitHubSetup = function (git) {
 
 const podcastSetupInt = new (function () {
 	const _isvalidDirName = (dirName) => {
-		//this need to be fix
+		//TODO his need to be fix regular expression
 		if (/\s/.test(dirName)) {
 			return false;
 		}
@@ -86,6 +86,7 @@ const podcastSetupInt = new (function () {
 
 		if (!fs.existsSync(`./podcast/${podcastName}/_data`)) {
 			fs.mkdirSync(`./podcast/${podcastName}/_data`, true);
+			//TODO to dump a sample json file
 		}
 	};
 })();
