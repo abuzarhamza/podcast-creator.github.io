@@ -1,4 +1,5 @@
 const simpleGit = require("simple-git");
+const fs = require("fs");
 
 const initGitHubSetup = function (git) {
 	this.git = git;
@@ -57,21 +58,58 @@ const initGitHubSetup = function (git) {
 	};
 };
 
-const dirStructureStatus = new (function () {})();
+const podcastSetupInt = new (function () {
+	const _isvalidDirName = (dirName) => {
+		//this need to be fix
+		if (/\s/.test(dirName)) {
+			return false;
+		}
+		return true;
+	};
+
+	this.setUpRootDir = () => {
+		if (!fs.existsSync("podcast")) {
+			fs.mkdirSync("podcast", true);
+		}
+	};
+
+	this.setupNewPodcastDir = (podcastName) => {
+		if (!_isvalidDirName(podcastName)) {
+			return new Error(
+				"podcast name should not have space or other speical characters"
+			);
+		}
+
+		if (!fs.existsSync(`./podcast/${podcastName}`)) {
+			fs.mkdirSync(`./podcast/${podcastName}`, true);
+		}
+
+		if (!fs.existsSync(`./podcast/${podcastName}/_data`)) {
+			fs.mkdirSync(`./podcast/${podcastName}/_data`, true);
+		}
+	};
+})();
 
 async function main() {
 	try {
 		//--new_podcast <podcast_name>
 		//--update_pdocast
 
+		let argv = "new_podcast";
+		let podcastName = "happy_ ist";
 		//1. create new directory for html page and podcast
 		//html
 		// podcast/podcat_name/resource/_data.json
 		// podcast/podcat_name/xml/podcast.xml
+
 		const git = simpleGit.default();
 		await new initGitHubSetup(git).init();
 		await git.checkout("th-pages");
 		const currentBranchData = await git.branch();
+		podcastSetupInt.setUpRootDir();
+		if (argv === "new_podcast") {
+			podcastSetupInt.setupNewPodcastDir(podcastName);
+		}
 	} catch (err) {
 		console.error("------>", err.message);
 	}
