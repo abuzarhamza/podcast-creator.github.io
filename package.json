@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/abuzarhamza/podcast-creator.github.io#readme",
   "dependencies": {
+    "md5-file": "^5.0.0",
     "simple-git": "^3.22.0"
   }
 }
