@@ -1,6 +1,8 @@
 const simpleGit = require("simple-git");
 const fs = require("fs/promises");
 const md5File = require("md5-file");
+const path = require("path");
+const { stringify } = require("querystring");
 
 const initGitHubSetup = function (git) {
 	this.git = git;
@@ -67,7 +69,9 @@ const podcastSetupInt = new (function () {
 		return `${getPodcastDirName(podcastName)}/_data`;
 	};
 
-	const getDataFileName = () => return "_data.json";
+	const getDataFileName = () => {
+		return "_data.json";
+	};
 
 	const getPodcastResourceDir = (podcastName) => {
 		return `${getPodcastDirName(podcastName)}/resource`;
@@ -160,14 +164,19 @@ const podcastSetupInt = new (function () {
 		};
 	};
 
-	const writeMD5File = async (podcastName) => {
+	const writeMD5FileForData = async (podcastName) => {
 		let md5FileDataName = getMd5HashDataFile();
 		let filehandle;
 		try {
+			let obj = updateMD5FileObject(
+				1,
+				podcastName,
+				path.join(getPodcastDataDir(), getDataFileName())
+			);
 			filehandle = await fs.open(md5FileDataName, "w");
 			await filehandle.writeFile(
 				JSON.stringify({
-					md5_check: [updateMD5FileObject(1, podcastName)],
+					md5_check: [obj],
 				}),
 				"utf-8"
 			);
@@ -194,7 +203,8 @@ const podcastSetupInt = new (function () {
 		*/
 		let md5File = getMd5HashDataFile();
 		if (!fs.existsSync(md5File)) {
-			await writeMD5File(podcastName);
+			await writeMD5FileForData(podcastName);
+			return;
 		}
 		const jsonDataStr = fs.readFileSync(getMd5HashFile(), "utf8");
 		const jsonData = JSON.parse(jsonDataStr);
