@@ -3,6 +3,8 @@ const fs = require("fs");
 const md5File = require("md5-file");
 const path = require("path");
 const _ = require("lodash");
+const ShortUniqueId = require("short-unique-id");
+
 const uid = new ShortUniqueId({ length: 6 });
 
 const initGitHubSetup = function (git) {
@@ -161,7 +163,7 @@ const podcastSetupInt = new (function () {
 			podcast_name,
 			file_name,
 			file_type,
-			integrity: md5File(
+			integrity: md5File.sync(
 				path.join(getPodcastDataDir(podcast_name), getDataFileName())
 			),
 			path: path.join(getPodcastDataDir(podcast_name), getDataFileName()),
@@ -186,6 +188,7 @@ const podcastSetupInt = new (function () {
 		//write md5_lock file
 		if (flag === "w") {
 			let obj = getMD5LockFileObject(podcastName);
+			console.log(obj);
 			try {
 				fs.writeFileSync(md5LockFile, JSON.stringify(obj, null, 4));
 			} catch (err) {
@@ -205,6 +208,7 @@ const podcastSetupInt = new (function () {
 				} else if (obj.md5_lock.length > 1) {
 					let md5Index = _.findIndex(obj.md5_lock, {
 						podcast_name: podcastName,
+						file_type: "data",
 					});
 					let newObj = updateMD5LockFileObject(
 						uid.rnd(),
@@ -232,7 +236,7 @@ const podcastSetupInt = new (function () {
 		}
 	};
 
-	this.udpateMD5forDataFile = async (podcastName) => {
+	this.udpateMD5LockforDataFile = async (podcastName) => {
 		//if md5_lock file is not exist, then write md5_lock file
 		if (!fs.existsSync(getMD5LockFile())) {
 			modifyMD5LockFile(podcastName, "w");
@@ -260,13 +264,14 @@ async function main() {
 		// await git.checkout("th-pages");
 		// const currentBranchData = await git.branch();
 		podcastSetupInt.setUpRootDir();
+
 		if (argv === "new_podcast") {
 			podcastSetupInt.setupNewPodcastDir(podcastName);
 			podcastSetupInt.createNewDataFile(podcastName);
-			podcastSetupInt.udpateMD5forDataFile(podcastName); // this is like outside package-lock.file
+			podcastSetupInt.udpateMD5LockforDataFile(podcastName); // this is like outside package-lock.file
 		}
-		if (argv === "update_podcast") {
-		}
+		// if (argv === "update_podcast") {
+		// }
 	} catch (err) {
 		console.error("------>", err.message);
 	}
