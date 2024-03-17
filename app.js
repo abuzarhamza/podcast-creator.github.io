@@ -1,8 +1,9 @@
 const simpleGit = require("simple-git");
-const fs = require("fs/promises");
+const fs = require("fs");
 const md5File = require("md5-file");
 const path = require("path");
-const { stringify } = require("querystring");
+const _ = require("lodash");
+const uid = new ShortUniqueId({ length: 6 });
 
 const initGitHubSetup = function (git) {
 	this.git = git;
@@ -79,8 +80,8 @@ const podcastSetupInt = new (function () {
 	const getPodcastImgDir = (podcastName) => {
 		return `${getPodcastResourceDir(podcastName)}/img`;
 	};
-	const getMd5HashDataFile = () => {
-		return "./podcast/_md5_status.json";
+	const getMD5LockFile = () => {
+		return "./podcast/_md5_lock.json";
 	};
 
 	const getDataFile = () => {};
@@ -149,7 +150,7 @@ const podcastSetupInt = new (function () {
 		fs.writeFileSync(dataFileName, JSON.stringify(jsonSample, null, 4));
 	};
 
-	const updateMD5FileObject = (
+	const updateMD5LockFileObject = (
 		id,
 		podcast_name,
 		file_name,
@@ -160,55 +161,85 @@ const podcastSetupInt = new (function () {
 			podcast_name,
 			file_name,
 			file_type,
-			md5_hash: md5File(),
+			integrity: md5File(
+				path.join(getPodcastDataDir(podcast_name), getDataFileName())
+			),
+			path: path.join(getPodcastDataDir(podcast_name), getDataFileName()),
 		};
 	};
 
-	const writeMD5FileForData = async (podcastName) => {
-		let md5FileDataName = getMd5HashDataFile();
-		let filehandle;
-		try {
-			let obj = updateMD5FileObject(
-				1,
-				podcastName,
-				path.join(getPodcastDataDir(), getDataFileName())
-			);
-			filehandle = await fs.open(md5FileDataName, "w");
-			await filehandle.writeFile(
-				JSON.stringify({
-					md5_check: [obj],
-				}),
-				"utf-8"
-			);
-		} finally {
-			await filehandle?.close();
+	const getMD5LockFileObject = (podcast_name) => {
+		return {
+			md5_lock: [
+				updateMD5LockFileObject(
+					uid.rnd(),
+					podcast_name,
+					getDataFileName(),
+					"data"
+				),
+			],
+		};
+	};
+
+	const modifyMD5LockFile = async (podcastName, flag = "w") => {
+		const md5LockFile = getMD5LockFile();
+		//write md5_lock file
+		if (flag === "w") {
+			let obj = getMD5LockFileObject(podcastName);
+			try {
+				fs.writeFileSync(md5LockFile, JSON.stringify(obj, null, 4));
+			} catch (err) {
+				throw new Error(err);
+			}
+		} else if (flag === "u") {
+			try {
+				const data = fs.readFileSync(md5LockFile, "utf8");
+				let obj = JSON.parse(data);
+				if (
+					!obj ||
+					!obj.md5_lock ||
+					!Array.isArray(obj.md5_lock) ||
+					obj.md5_lock.length === 0
+				) {
+					throw new Error(`${getMD5LockFile()} is not proper format`);
+				} else if (obj.md5_lock.length > 1) {
+					let md5Index = _.findIndex(obj.md5_lock, {
+						podcast_name: podcastName,
+					});
+					let newObj = updateMD5LockFileObject(
+						uid.rnd(),
+						podcastName,
+						getDataFileName(),
+						"data"
+					);
+					if (md5Index === -1) {
+						obj.md5_lock.push(newObj);
+					} else {
+						let rndId = uid.rnd();
+						if (
+							obj.md5_lock[md5Index] &&
+							obj.md5_lock[md5Index].id
+						) {
+							rndId = obj.md5_lock[md5Index].id;
+						}
+						obj.md5_lock[md5Index] = _.merge(newObj, { id: rndId });
+					}
+					fs.writeFileSync(md5LockFile, JSON.stringify(obj, null, 4));
+				}
+			} catch (err) {
+				throw new Error(err);
+			}
 		}
 	};
 
-	this.udpatemd5forDataFile = async (podcastName) => {
-		/*
-			{
-				md5_check: [
-					{
-						sno: 1
-						podcast_name: ""
-						file_name: ""
-						md5_hash: ""
-						file_type: "data"
-					}
-				]
-					
-				
-			}
-		*/
-		let md5File = getMd5HashDataFile();
-		if (!fs.existsSync(md5File)) {
-			await writeMD5FileForData(podcastName);
+	this.udpateMD5forDataFile = async (podcastName) => {
+		//if md5_lock file is not exist, then write md5_lock file
+		if (!fs.existsSync(getMD5LockFile())) {
+			modifyMD5LockFile(podcastName, "w");
 			return;
 		}
-		const jsonDataStr = fs.readFileSync(getMd5HashFile(), "utf8");
-		const jsonData = JSON.parse(jsonDataStr);
-		let;
+		//if md5_lock file is exist, then read md5_lock file
+		modifyMD5LockFile(podcastName, "u");
 	};
 })();
 
@@ -232,7 +263,7 @@ async function main() {
 		if (argv === "new_podcast") {
 			podcastSetupInt.setupNewPodcastDir(podcastName);
 			podcastSetupInt.createNewDataFile(podcastName);
-			podcastSetupInt.udpatemd5forDataFile(podcastName);
+			podcastSetupInt.udpateMD5forDataFile(podcastName); // this is like outside package-lock.file
 		}
 		if (argv === "update_podcast") {
 		}
