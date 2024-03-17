@@ -19,6 +19,7 @@
   "dependencies": {
     "lodash": "^4.17.21",
     "md5-file": "^5.0.0",
+    "podcast": "^2.0.1",
     "short-unique-id": "^5.0.3",
     "simple-git": "^3.22.0"
   }

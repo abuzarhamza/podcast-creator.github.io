@@ -4,9 +4,13 @@ const md5File = require("md5-file");
 const path = require("path");
 const _ = require("lodash");
 const ShortUniqueId = require("short-unique-id");
+const { Podcast } = require("podcast");
 
 const uid = new ShortUniqueId({ length: 6 });
 
+const feed = new Podcast({});
+
+console.log(feed);
 const initGitHubSetup = function (git) {
 	this.git = git;
 	const gitGetConfigRemote = (key) => {
@@ -40,6 +44,10 @@ const initGitHubSetup = function (git) {
 		return false;
 	};
 
+	const hasBranch = (branchData, pattern) => {
+		return branchData?.all.some((branchName) => pattern.test(branchName));
+	};
+
 	this.init = async () => {
 		// check the url name git
 		let remoteUrlData = await gitGetConfigRemote("remote.origin.url");
@@ -55,11 +63,17 @@ const initGitHubSetup = function (git) {
 		let remoteBranchData = await this.git.branch(["-r"]);
 		let localBranchList = await this.git.branchLocal();
 		console.log(remoteBranchData, localBranchList);
+		// if (
+		// 	!hasRemoteGHPageBranch(remoteBranchData) &&
+		// 	!hasLocalGHPageBranch(localBranchList)
+		// ) {
+		// 	const status = await this.git.branch(["th-pages"]);
+		// }
 		if (
-			!hasRemoteGHPageBranch(remoteBranchData) &&
-			!hasLocalGHPageBranch(localBranchList)
+			hasBranch(remoteBranchData, /^origin\/gh-pages$/) &&
+			hasBranch(localBranchList, /^gh-pages$/)
 		) {
-			const status = await this.git.branch(["th-pages"]);
+			await this.git.branch(["th-pages"]);
 		}
 	};
 };
@@ -108,24 +122,15 @@ const podcastSetupInt = new (function () {
 			);
 		}
 		const podcastDir = getPodcastDirName(podcastName);
-		if (!fs.existsSync(podcastDir)) {
-			fs.mkdirSync(podcastDir, true);
-		}
 		const dataDir = getPodcastDataDir(podcastName);
-		if (!fs.existsSync(dataDir)) {
-			fs.mkdirSync(dataDir, true);
-			//TODO to dump a sample json file
-		}
-
 		const resDir = getPodcastResourceDir(podcastName);
-		if (!fs.existsSync(resDir)) {
-			fs.mkdirSync(resDir, true);
-		}
-
 		const imgDir = getPodcastImgDir(podcastName);
-		if (!fs.existsSync(imgDir)) {
-			fs.mkdirSync(imgDir, true);
-		}
+
+		[podcastDir, dataDir, resDir, imgDir].forEach((dir) => {
+			if (!fs.existsSync(dir)) {
+				fs.mkdirSync(dir, { recursive: true });
+			}
+		});
 	};
 
 	this.createNewDataFile = (podcastName) => {
@@ -197,16 +202,16 @@ const podcastSetupInt = new (function () {
 		} else if (flag === "u") {
 			try {
 				const data = fs.readFileSync(md5LockFile, "utf8");
-				let obj = JSON.parse(data);
+				let existingObj = JSON.parse(data);
 				if (
-					!obj ||
-					!obj.md5_lock ||
-					!Array.isArray(obj.md5_lock) ||
-					obj.md5_lock.length === 0
+					!existingObj ||
+					!existingObj.md5_lock ||
+					!Array.isArray(existingObj.md5_lock) ||
+					existingObj.md5_lock.length === 0
 				) {
 					throw new Error(`${getMD5LockFile()} is not proper format`);
-				} else if (obj.md5_lock.length > 1) {
-					let md5Index = _.findIndex(obj.md5_lock, {
+				} else if (existingObj.md5_lock.length > 1) {
+					let md5Index = _.findIndex(existingObj.md5_lock, {
 						podcast_name: podcastName,
 						file_type: "data",
 					});
@@ -217,18 +222,23 @@ const podcastSetupInt = new (function () {
 						"data"
 					);
 					if (md5Index === -1) {
-						obj.md5_lock.push(newObj);
+						existingObj.md5_lock.push(newObj);
 					} else {
 						let rndId = uid.rnd();
 						if (
-							obj.md5_lock[md5Index] &&
-							obj.md5_lock[md5Index].id
+							existingObj.md5_lock[md5Index] &&
+							existingObj.md5_lock[md5Index].id
 						) {
-							rndId = obj.md5_lock[md5Index].id;
+							rndId = existingObj.md5_lock[md5Index].id;
 						}
-						obj.md5_lock[md5Index] = _.merge(newObj, { id: rndId });
+						existingObj.md5_lock[md5Index] = _.merge(newObj, {
+							id: rndId,
+						});
 					}
-					fs.writeFileSync(md5LockFile, JSON.stringify(obj, null, 4));
+					fs.writeFileSync(
+						md5LockFile,
+						JSON.stringify(existingObj, null, 4)
+					);
 				}
 			} catch (err) {
 				throw new Error(err);
@@ -236,7 +246,7 @@ const podcastSetupInt = new (function () {
 		}
 	};
 
-	this.udpateMD5LockforDataFile = async (podcastName) => {
+	this.updateMD5LockforDataFile = async (podcastName) => {
 		//if md5_lock file is not exist, then write md5_lock file
 		if (!fs.existsSync(getMD5LockFile())) {
 			modifyMD5LockFile(podcastName, "w");
@@ -268,10 +278,13 @@ async function main() {
 		if (argv === "new_podcast") {
 			podcastSetupInt.setupNewPodcastDir(podcastName);
 			podcastSetupInt.createNewDataFile(podcastName);
-			podcastSetupInt.udpateMD5LockforDataFile(podcastName); // this is like outside package-lock.file
+			podcastSetupInt.updateMD5LockforDataFile(podcastName); // this is like outside package-lock.file
 		}
+		// TODO : update the podcast data with new data file
 		// if (argv === "update_podcast") {
 		// }
+
+		// TO
 	} catch (err) {
 		console.error("------>", err.message);
 	}
