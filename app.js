@@ -8,7 +8,7 @@ const { Podcast } = require("podcast");
 
 const uid = new ShortUniqueId({ length: 6 });
 
-const feed = new Podcast({});
+// const feed = new Podcast({});
 
 console.log(feed);
 const initGitHubSetup = function (git) {
@@ -100,61 +100,8 @@ const podcastSetupInt = new (function () {
 		return "./podcast/_md5_lock.json";
 	};
 
-	const getDataFile = () => {};
 	const _isvalidDirName = (dirName) => {
-		//TODO his need to be fix regular expression
-		if (/\s/.test(dirName)) {
-			return false;
-		}
-		return true;
-	};
-
-	this.setUpRootDir = () => {
-		if (!fs.existsSync("podcast")) {
-			fs.mkdirSync("podcast", true);
-		}
-	};
-
-	this.setupNewPodcastDir = (podcastName) => {
-		if (!_isvalidDirName(podcastName)) {
-			return new Error(
-				"podcast name should not have space or other speical characters"
-			);
-		}
-		const podcastDir = getPodcastDirName(podcastName);
-		const dataDir = getPodcastDataDir(podcastName);
-		const resDir = getPodcastResourceDir(podcastName);
-		const imgDir = getPodcastImgDir(podcastName);
-
-		[podcastDir, dataDir, resDir, imgDir].forEach((dir) => {
-			if (!fs.existsSync(dir)) {
-				fs.mkdirSync(dir, { recursive: true });
-			}
-		});
-	};
-
-	this.createNewDataFile = (podcastName) => {
-		let dataFileName = `${getPodcastDataDir(podcastName)}/_data.json`;
-
-		if (fs.existsSync(dataFileName)) {
-			return false;
-		}
-
-		let jsonSample = {
-			name: "",
-			description: "",
-			updated_at: new Date().toJSON(),
-			podcasts: [
-				{
-					item_no: 1,
-					name: "same",
-					file_url: "",
-					published_at: new Date().toJSON(),
-					publish_status: false,
-				},
-			],
-		};
-		fs.writeFileSync(dataFileName, JSON.stringify(jsonSample, null, 4));
+		return /^[a-zA-Z0-9_-]+$/.test(dirName);
 	};
 
 	const updateMD5LockFileObject = (
@@ -255,6 +202,56 @@ const podcastSetupInt = new (function () {
 		//if md5_lock file is exist, then read md5_lock file
 		modifyMD5LockFile(podcastName, "u");
 	};
+
+	this.setUpRootDir = () => {
+		if (!fs.existsSync("podcast")) {
+			fs.mkdirSync("podcast", true);
+		}
+	};
+
+	this.setupNewPodcastDir = (podcastName) => {
+		if (!_isvalidDirName(podcastName)) {
+			return new Error(
+				"podcast name should not have space or other speical characters"
+			);
+		}
+		const podcastDir = getPodcastDirName(podcastName);
+		const dataDir = getPodcastDataDir(podcastName);
+		const resDir = getPodcastResourceDir(podcastName);
+		const imgDir = getPodcastImgDir(podcastName);
+
+		[podcastDir, dataDir, resDir, imgDir].forEach((dir) => {
+			if (!fs.existsSync(dir)) {
+				fs.mkdirSync(dir, { recursive: true });
+			}
+		});
+	};
+
+	this.createNewDataFile = (podcastName) => {
+		let dataFileName = `${getPodcastDataDir(podcastName)}/_data.json`;
+
+		if (fs.existsSync(dataFileName)) {
+			return false;
+		}
+
+		let jsonSample = {
+			name: "",
+			description: "",
+			updated_at: new Date().toJSON(),
+			podcasts: [
+				{
+					item_no: 1,
+					name: "same",
+					file_url: "",
+					published_at: new Date().toJSON(),
+					publish_status: false,
+				},
+			],
+		};
+		fs.writeFileSync(dataFileName, JSON.stringify(jsonSample, null, 4));
+	};
+
+	this.writePodcastFeedXML = (podcastName) => {};
 })();
 
 async function main() {
